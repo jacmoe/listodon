@@ -1,0 +1,181 @@
+= mastodonpp
+:toc: preamble
+:project: mastodonpp
+:uri-base: https://schlomp.space/tastytea/{project}
+:uri-branch-main: {uri-base}/src/branch/main
+:uri-wp-mastodon: https://en.wikipedia.org/wiki/Mastodon_(software)
+:uri-pleroma: https://pleroma.social/
+:uri-mastodon-cpp: https://schlomp.space/tastytea/mastodon-cpp
+:uri-reference: https://doc.schlomp.space/{project}/
+:uri-gcc: https://gcc.gnu.org/
+:uri-clang: https://clang.llvm.org/
+:uri-cmake: https://cmake.org/
+:uri-doxygen: http://www.doxygen.nl/
+:uri-catch: https://github.com/catchorg/Catch2
+:uri-dpkg: https://packages.qa.debian.org/dpkg
+:uri-rpm-build: http://www.rpm.org
+:uri-libcurl: https://curl.haxx.se/libcurl/
+:uri-nodeinfo: https://nodeinfo.diaspora.software/
+:uri-clang-tidy: https://clang.llvm.org/extra/clang-tidy/
+
+*{project}* is a C++ wrapper for the link:{uri-wp-mastodon}[Mastodon] and
+link:{uri-pleroma}[Pleroma] APIs. It replaces
+link:{uri-mastodon-cpp}[mastodon-cpp].
+
+[IMPORTANT]
+mastodonpp is in maintenance mode. I will continue to fix bugs, but won't add
+new features. If you'd like to adopt this project, please get in touch.
+
+We aim to create a library that is comfortable, yet minimal. All API endpoints
+from Mastodon and Pleroma are stored in ``enum class``es, to counteract typos
+and make your life easier. The network-facing code is built on
+link:{uri-libcurl}[libcurl], a mature and stable library that is available on
+most operating systems. The library does not parse the responses itself, but
+returns to you the raw data, because we know everyone has their favorite JSON
+library and we don't want to impose our choice on you!
+
+== Features
+
+Here is a rough overview of the features:
+
+* [x] `GET`, Streaming `GET`, `POST`, `PATCH`, `PUT` and `DELETE` requests.
+* [x] Comfortable access to pagination headers.
+* [x] Report maximum allowed character per post.
+* [x] Simple function to register a new “app” (get an access token).
+* [x] Report which mime types are allowed for posting statuses.
+* [x] Find and retrieve link:{uri-nodeinfo}[NodeInfo].
+* [x] Easy access to the libcurl handle for maximum configurability.
+* [x] Set proxy server, User-Agent and the path to the CA bundle.
+
+== Usage
+
+Have a look at the link:{uri-reference}[reference].
+
+=== Example
+
+[source,cpp]
+--------------------------------------------------------------------------------
+#include <mastodonpp/mastodonpp.hpp>
+#include <iostream>
+
+int main()
+{
+    mastodonpp::Instance instance{"example.com", "123AccessToken123"};
+    instance.set_proxy("socks4a://[::1]:9050");
+    mastodonpp::Connection connection{instance};
+
+    const mastodonpp::parametermap parameters
+        {
+            {"status", "How is the weather?"},
+            {"poll[options]", vector<string_view>{"Nice", "not nice"}},
+            {"poll[expires_in]", "86400"}
+        };
+    auto answer{connection.post(mastodonpp::API::v1::statuses, parameters)};
+
+    if (answer)
+    {
+        std::cout << answer << std::endl;
+    }
+}
+--------------------------------------------------------------------------------
+
+link:{uri-reference}/examples.html[More examples] are included in the reference.
+
+== Install
+
+[alt="Packaging status" link=https://repology.org/project/mastodonpp/versions]
+image::https://repology.org/badge/vertical-allrepos/mastodonpp.svg[]
+
+=== Gentoo
+
+[source,shell]
+--------------------------------------------------------------------------------
+eselect repository enable guru
+echo 'dev-cpp/mastodonpp' >> /etc/portage/package.accept_keywords/mastodonpp
+emaint sync -r guru
+emerge -a dev-cpp/mastodonpp
+--------------------------------------------------------------------------------
+
+=== Arch
+
+The git-version is available via the AUR:
+<https://aur.archlinux.org/packages/mastodonpp-git/>.
+
+=== Debian and Ubuntu
+
+We automatically generate packages for Debian buster (10) and Ubuntu bionic
+(18.04), but only for x86_64 (amd64). Download them at
+link:{uri-base}/releases[schlomp.space].
+
+[source,shell]
+--------------------------------------------------------------------------------
+apt install ./libmastodonpp*.deb
+--------------------------------------------------------------------------------
+
+=== CentOS
+
+We automatically generate packages for CentOS 8, but only for x86_64
+(amd64). Download them at link:{uri-base}/releases[schlomp.space].
+
+[source,shell]
+--------------------------------------------------------------------------------
+yum install ./libmastodonpp*.rpm
+--------------------------------------------------------------------------------
+
+=== From source
+
+==== Dependencies
+
+* Tested OS: Linux
+* C\++ compiler with C++17 support (tested: link:{uri-gcc}[GCC] 7/8/9,
+  link:{uri-clang}[clang] 6/7)
+* link:{uri-cmake}[CMake] (at least: 3.9)
+* link:{uri-libcurl}[libcurl] (at least: 7.56)
+* Optional
+  ** Documentation: link:{uri-doxygen}[Doxygen] (tested: 1.8)
+  ** Tests: link:{uri-catch}[Catch] (tested: 2.5 / 1.2)
+  ** DEB package: link:{uri-dpkg}[dpkg] (tested: 1.19)
+  ** RPM package: link:{uri-rpm-build}[rpm-build] (tested: 4.11)
+
+==== Get sourcecode
+
+===== Release
+
+Download the current release at link:{uri-base}/releases[schlomp.space].
+
+===== Development version
+
+[source,shell]
+--------------------------------------------------------------------------------
+git clone https://schlomp.space/tastytea/mastodonpp.git
+--------------------------------------------------------------------------------
+
+==== Compile
+
+[source,shell]
+--------------------------------------------------------------------------------
+mkdir -p build && cd build
+cmake ..
+cmake --build . -- -j$(nproc --ignore=1)
+--------------------------------------------------------------------------------
+
+.CMake options:
+* `-DCMAKE_BUILD_TYPE=Debug` for a debug build.
+* `-DWITH_TESTS=YES` if you want to compile the tests.
+* `-DWITH_EXAMPLES=YES` if you want to compile the examples.
+* `-DWITH_DOC=YES` if you want to generate the API documentation.
+* `-DWITH_CLANG-TIDY=YES` to check the sourcecode with
+  link:{uri-clang-tidy}[clang-tidy] while compiling.
+* One of:
+  ** `-DWITH_DEB=YES` if you want to be able to generate a deb-package.
+  ** `-DWITH_RPM=YES` if you want to be able to generate an rpm-package.
+
+To create a deb or rpm package, run `make package` after compiling.
+
+===== Windows
+
+mastodonpp has been reported to compile with MinGW GCC, but
+`http_method::DELETE` has to be renamed, because Windows headers define a
+`DELETE` macro.
+
+include::{uri-base}/raw/branch/main/CONTRIBUTING.adoc[]
